@@ -45,18 +45,18 @@ const ACCEPTED_TYPES = [
   "image/png",
 ];
 
-const TEAL = "#1a7a6e";
-const ORANGE = "#e07b2a";
+const INDIGO = "#34419F";
+const ORANGE = "#F46A17";
 
 const colors = {
-  primary: TEAL,
-  accent: TEAL,
+  primary: INDIGO,
+  accent: INDIGO,
   cta: ORANGE,
-  bg: "#f1f5f9",
+  bg: "#f4f5fb",
   cardBg: "#ffffff",
   textMain: "#1e293b",
   textMuted: "#64748b",
-  border: "#e2e8f0",
+  border: "#e0e3f5",
   success: "#16a34a",
   danger: "#dc2626",
 };
@@ -118,18 +118,14 @@ export default function KycSubmissionPage() {
   const resetCanvas = (): void => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     const width = rect.width || 620;
     const height = rect.height || 200;
-
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
-
     const context = canvas.getContext("2d");
     if (!context) return;
-
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
     context.lineWidth = 2;
     context.lineCap = "round";
@@ -137,7 +133,6 @@ export default function KycSubmissionPage() {
     context.strokeStyle = colors.primary;
     context.fillStyle = colors.cardBg;
     context.fillRect(0, 0, width, height);
-
     setHasSignature(false);
   };
 
@@ -149,7 +144,6 @@ export default function KycSubmissionPage() {
 
   useEffect(() => {
     if (!zohoId) return;
-
     const fetchCustomer = async () => {
       setCustomerLoading(true);
       setCustomerError(null);
@@ -189,7 +183,6 @@ export default function KycSubmissionPage() {
         setCustomerLoading(false);
       }
     };
-
     fetchCustomer();
   }, [zohoId]);
 
@@ -201,12 +194,10 @@ export default function KycSubmissionPage() {
   };
 
   const validateFile = (file: File): string | null => {
-    if (!ACCEPTED_TYPES.includes(file.type)) {
+    if (!ACCEPTED_TYPES.includes(file.type))
       return "Only PDF, JPG, or PNG files are accepted.";
-    }
-    if (file.size > MAX_FILE_SIZE_BYTES) {
+    if (file.size > MAX_FILE_SIZE_BYTES)
       return "File exceeds the 5MB size limit.";
-    }
     return null;
   };
 
@@ -296,27 +287,22 @@ export default function KycSubmissionPage() {
   };
 
   const stopDrawing = (): void => setIsDrawing(false);
-
   const clearSignature = (): void => resetCanvas();
 
   const applyTypedSignature = async (): Promise<void> => {
     const canvas = canvasRef.current;
     const context = canvas?.getContext("2d");
     if (!context || !canvas) return;
-
     const value = form.customerName.trim();
     if (!value) {
       toast.warning("Please enter your name in the Customer Name field first.");
       return;
     }
-
     await document.fonts.load("64px 'Dancing Script'");
     await document.fonts.ready;
-
     const rect = canvas.getBoundingClientRect();
     const width = rect.width || 620;
     const height = rect.height || 200;
-
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.setTransform(
       window.devicePixelRatio || 1,
@@ -328,20 +314,16 @@ export default function KycSubmissionPage() {
     );
     context.fillStyle = colors.cardBg;
     context.fillRect(0, 0, width, height);
-
     context.fillStyle = colors.primary;
     context.textAlign = "center";
     context.textBaseline = "middle";
-
     let fontSize = 72;
     while (fontSize > 24) {
       context.font = `700 ${fontSize}px 'Dancing Script', cursive`;
       if (context.measureText(value).width <= width * 0.8) break;
       fontSize -= 2;
     }
-
     context.fillText(value, width / 2, height / 2);
-
     setHasSignature(true);
     toast.success("Signature applied successfully.");
   };
@@ -357,7 +339,7 @@ export default function KycSubmissionPage() {
     const body = new FormData();
     body.append("customerRef", zohoId);
     body.append("formId", formId);
-    body.append("company", "RGSL");
+    body.append("company", "MF");
     body.append("name", form.customerName);
     body.append("email", form.emailAddress);
     body.append("phone", form.phoneNumber);
@@ -370,19 +352,16 @@ export default function KycSubmissionPage() {
       body.append("passport", passportDoc.file, passportDoc.name);
     if (emiratesDoc)
       body.append("emiratesId", emiratesDoc.file, emiratesDoc.name);
-
     const res = await fetch(`${API_URL}/internal/submit-kyc`, {
       method: "POST",
       body,
     });
-
     if (!res.ok) {
       const err = await res
         .json()
         .catch(() => ({ message: "Submission failed." }));
       throw new Error(err.message || "Submission failed.");
     }
-
     return res.json();
   }
 
@@ -390,7 +369,6 @@ export default function KycSubmissionPage() {
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> => {
     event.preventDefault();
-
     if (!form.emiratesId || !form.passportNumber) {
       toast.error("Please fill in all the required fields.");
       return;
@@ -399,9 +377,7 @@ export default function KycSubmissionPage() {
       toast.error("Please provide your signature before submitting.");
       return;
     }
-
     setSubmitting(true);
-
     try {
       const signatureBlob: Blob | null = await new Promise((resolve) =>
         canvasRef.current?.toBlob((blob) => resolve(blob), "image/png"),
@@ -414,7 +390,6 @@ export default function KycSubmissionPage() {
       const signatureFile = new File([signatureBlob], "signature.png", {
         type: "image/png",
       });
-
       await submitKycForm(
         form,
         passportDoc,
@@ -453,13 +428,7 @@ export default function KycSubmissionPage() {
   }) => (
     <Box sx={{ display: "flex", alignItems: "center", mb: 3, mt: 1 }}>
       <Box
-        sx={{
-          width: 4,
-          height: 28,
-          bgcolor: colors.accent,
-          borderRadius: 1,
-          mr: 2,
-        }}
+        sx={{ width: 4, height: 28, bgcolor: ORANGE, borderRadius: 1, mr: 2 }}
       />
       <Box>
         <Typography
@@ -487,7 +456,6 @@ export default function KycSubmissionPage() {
   }) => {
     const isDragActive = dragTarget === type;
     const fileInputRef = useRef<HTMLInputElement | null>(null);
-
     const handleZoneClick = (): void => {
       fileInputRef.current?.click();
     };
@@ -576,22 +544,19 @@ export default function KycSubmissionPage() {
           alignItems: "center",
           justifyContent: "center",
           height: 180,
-          border: `2px dashed ${isDragActive ? colors.accent : colors.border}`,
+          border: `2px dashed ${isDragActive ? INDIGO : colors.border}`,
           borderRadius: 2,
-          bgcolor: isDragActive ? "#eff6ff" : "#f8fafc",
+          bgcolor: isDragActive ? "#eef0fb" : "#f8fafc",
           cursor: "pointer",
           transition: "all 0.15s ease",
           transform: isDragActive ? "scale(1.01)" : "scale(1)",
-          "&:hover": {
-            borderColor: colors.accent,
-            bgcolor: "#eff6ff",
-          },
+          "&:hover": { borderColor: INDIGO, bgcolor: "#eef0fb" },
         }}
       >
         <UploadIcon
           sx={{
             fontSize: 36,
-            color: isDragActive ? colors.accent : colors.textMuted,
+            color: isDragActive ? INDIGO : colors.textMuted,
             mb: 1,
           }}
         />
@@ -626,7 +591,6 @@ export default function KycSubmissionPage() {
       </Alert>
     );
   }
-
   if (customerLoading) {
     return (
       <Box
@@ -637,7 +601,7 @@ export default function KycSubmissionPage() {
           minHeight: "100vh",
         }}
       >
-        <CircularProgress />
+        <CircularProgress sx={{ color: INDIGO }} />
       </Box>
     );
   }
@@ -684,7 +648,7 @@ export default function KycSubmissionPage() {
           <Typography variant="body2" color={colors.textMuted}>
             This form has already been submitted and is under review. If you
             believe this is an error, please contact at
-            info@royalgulfshipping.com
+            info@messiahfreight.co.uk
           </Typography>
         </Paper>
       </Box>
@@ -703,8 +667,8 @@ export default function KycSubmissionPage() {
       <Box
         sx={{
           bgcolor: colors.cardBg,
-          borderBottom: `1px solid ${colors.border}`,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+          borderBottom: `3px solid ${ORANGE}`,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.07)",
         }}
       >
         <Container maxWidth="lg">
@@ -715,19 +679,25 @@ export default function KycSubmissionPage() {
             sx={{ py: 2 }}
           >
             <Stack direction="row" alignItems="center" spacing={2.5}>
-              {/* Logo */}
               <Box
                 component="img"
-                src="/logo.png"
-                alt="Royal Gulf Shipping & Logistics"
-                sx={{ height: 48, objectFit: "contain" }}
+                src="https://messiahfreight.co.uk/wp-content/uploads/2023/10/mfd-white.png"
+                alt="Messiah Freight"
+                sx={{
+                  height: 48,
+                  objectFit: "contain",
+                  bgcolor: INDIGO,
+                  borderRadius: 1.5,
+                  px: 1.5,
+                  py: 0.5,
+                }}
               />
               <Divider orientation="vertical" flexItem />
               <Box>
                 <Typography
                   variant="h6"
                   fontWeight={800}
-                  sx={{ color: colors.primary, letterSpacing: "-0.02em" }}
+                  sx={{ color: INDIGO, letterSpacing: "-0.02em" }}
                 >
                   Customer Onboarding
                 </Typography>
@@ -746,10 +716,14 @@ export default function KycSubmissionPage() {
             </Stack>
             <Chip
               label="Secure Form"
-              color="success"
               size="small"
               variant="outlined"
-              sx={{ fontWeight: 600, display: { xs: "none", md: "flex" } }}
+              sx={{
+                fontWeight: 600,
+                display: { xs: "none", md: "flex" },
+                color: INDIGO,
+                borderColor: INDIGO,
+              }}
             />
           </Stack>
         </Container>
@@ -762,10 +736,10 @@ export default function KycSubmissionPage() {
             sx={{
               mb: 4,
               borderRadius: 2,
-              bgcolor: "#eaf5f3",
-              color: "#0f4f47",
-              border: "1px solid #b9dcd7",
-              "& .MuiAlert-icon": { color: colors.primary },
+              bgcolor: "#eef0fb",
+              color: "#1a2060",
+              border: `1px solid #c5caec`,
+              "& .MuiAlert-icon": { color: INDIGO },
             }}
           >
             Please ensure all information matches the official documents
@@ -815,9 +789,12 @@ export default function KycSubmissionPage() {
                             bgcolor: "#fafbfc",
                             "&:hover": { bgcolor: "#fff" },
                             "&.Mui-focused": { bgcolor: "#fff" },
+                            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                              borderColor: INDIGO,
+                            },
                           },
                           "& .MuiInputLabel-root.Mui-focused": {
-                            color: colors.accent,
+                            color: INDIGO,
                           },
                         }}
                       />
@@ -841,16 +818,8 @@ export default function KycSubmissionPage() {
                 />
                 <Grid container spacing={2.5}>
                   {[
-                    {
-                      name: "emiratesId",
-                      label: "Emirates ID Number",
-                      md: 4,
-                    },
-                    {
-                      name: "passportNumber",
-                      label: "Passport Number",
-                      md: 4,
-                    },
+                    { name: "emiratesId", label: "Emirates ID Number", md: 4 },
+                    { name: "passportNumber", label: "Passport Number", md: 4 },
                     {
                       name: "tradeLicenseNumber",
                       label: "Trade License Number",
@@ -872,9 +841,12 @@ export default function KycSubmissionPage() {
                             bgcolor: "#fafbfc",
                             "&:hover": { bgcolor: "#fff" },
                             "&.Mui-focused": { bgcolor: "#fff" },
+                            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                              borderColor: INDIGO,
+                            },
                           },
                           "& .MuiInputLabel-root.Mui-focused": {
-                            color: colors.accent,
+                            color: INDIGO,
                           },
                         }}
                       />
@@ -927,7 +899,6 @@ export default function KycSubmissionPage() {
                   title="Digital Signature"
                   subtitle="Draw or generate your official signature"
                 />
-
                 <Box
                   sx={{
                     display: "flex",
@@ -1004,13 +975,11 @@ export default function KycSubmissionPage() {
                       </Button>
                     </Stack>
                   </Box>
-
                   <Divider
                     orientation="vertical"
                     flexItem
                     sx={{ display: { xs: "none", md: "block" } }}
                   />
-
                   <Box
                     sx={{
                       flex: { xs: 1, md: 0.4 },
@@ -1043,8 +1012,8 @@ export default function KycSubmissionPage() {
                         borderRadius: 2,
                         textTransform: "none",
                         fontWeight: 600,
-                        bgcolor: colors.primary,
-                        "&:hover": { bgcolor: "#145f55" },
+                        bgcolor: INDIGO,
+                        "&:hover": { bgcolor: "#252e7a" },
                         "&.Mui-disabled": {
                           bgcolor: colors.border,
                           color: colors.textMuted,
@@ -1093,11 +1062,11 @@ export default function KycSubmissionPage() {
                       fontWeight: 700,
                       textTransform: "none",
                       fontSize: "1rem",
-                      bgcolor: colors.cta,
-                      boxShadow: "0 4px 14px rgba(224, 123, 42, 0.35)",
+                      bgcolor: ORANGE,
+                      boxShadow: "0 4px 14px rgba(244,106,23,0.30)",
                       "&:hover": {
-                        bgcolor: "#c4671f",
-                        boxShadow: "0 6px 20px rgba(224, 123, 42, 0.45)",
+                        bgcolor: "#d45a10",
+                        boxShadow: "0 6px 20px rgba(244,106,23,0.40)",
                       },
                       "&.Mui-disabled": {
                         bgcolor: colors.border,
@@ -1115,14 +1084,7 @@ export default function KycSubmissionPage() {
         </Box>
       </Container>
 
-      <Box
-        sx={{
-          bgcolor: colors.primary,
-          color: "white",
-          py: 3,
-          mt: "auto",
-        }}
-      >
+      <Box sx={{ bgcolor: INDIGO, color: "white", py: 3, mt: "auto" }}>
         <Container maxWidth="lg">
           <Stack
             direction={{ xs: "column", md: "row" }}
@@ -1131,8 +1093,8 @@ export default function KycSubmissionPage() {
             spacing={1}
           >
             <Typography variant="caption" sx={{ opacity: 0.7 }}>
-              © {new Date().getFullYear()} Royal Gulf Shipping & Logistics LLC.
-              All rights reserved.
+              © {new Date().getFullYear()} Messiah Freight Delivery Ltd. All
+              rights reserved.
             </Typography>
             <Typography variant="caption" sx={{ opacity: 0.7 }}>
               This portal is strictly for authorized use. Data is processed
