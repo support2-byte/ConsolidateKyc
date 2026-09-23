@@ -173,6 +173,7 @@ const InvoiceTemplateCard = ({
   const meta = INVOICE_META[invoice.invoiceType] ?? INVOICE_META.overstayed;
   const subtotal = invoice.subtotal ?? invoice.amount;
   const taxAmount = invoice.amount - subtotal;
+  const total = invoice.amount;
   const commodityLabel =
     [invoice.category, invoice.subcategory].filter(Boolean).join(" - ") || "—";
 
@@ -370,10 +371,18 @@ const InvoiceTemplateCard = ({
             </Stack>
             <Stack direction="row" justifyContent="space-between">
               <Typography variant="body2" color={colors.textMuted}>
-                Discount ({invoice.discount ?? 0} AED)
+                Discount (AED)
               </Typography>
               <Typography variant="body2">
-                {taxAmount.toFixed(2)} AED
+                {invoice.discount ?? 0} AED
+              </Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between" mt={1}>
+              <Typography variant="body1" fontWeight={600}>
+                Total
+              </Typography>
+              <Typography variant="body1" fontWeight={600}>
+                {total ?? 0} AED
               </Typography>
             </Stack>
           </>
