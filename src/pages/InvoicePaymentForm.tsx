@@ -172,7 +172,8 @@ const InvoiceTemplateCard = ({
   const isOverstay = invoice.invoiceType === "overstayed";
   const meta = INVOICE_META[invoice.invoiceType] ?? INVOICE_META.overstayed;
   const subtotal = invoice.subtotal ?? invoice.amount;
-  const taxAmount = invoice.amount - subtotal;
+  const taxAmount = subtotal * ((Number(invoice.taxPercent) || 0) / 100);
+  const discount = Number(invoice.discount) || 0;
   const total = invoice.amount;
   const commodityLabel =
     [invoice.category, invoice.subcategory].filter(Boolean).join(" - ") || "—";
@@ -258,6 +259,16 @@ const InvoiceTemplateCard = ({
           <InfoField label="Terms" value="Due on Receipt" />
           <InfoField label="Order Ref" value={order?.formNumber} />
           <InfoField label="Commodity" value={commodityLabel} />
+          <InfoField
+            label={
+              invoice.invoiceType === "dropoff" ? "Pickup Address" : "Address"
+            }
+            value={
+              invoice.invoiceType === "dropoff"
+                ? invoice.details?.pickupAddress
+                : invoice.details?.deliveryAddress
+            }
+          />
           {isOverstay && (
             <InfoField
               label="Overstayed"
@@ -373,16 +384,14 @@ const InvoiceTemplateCard = ({
               <Typography variant="body2" color={colors.textMuted}>
                 Discount (AED)
               </Typography>
-              <Typography variant="body2">
-                {invoice.discount ?? 0} AED
-              </Typography>
+              <Typography variant="body2">{discount.toFixed(2)} AED</Typography>
             </Stack>
             <Stack direction="row" justifyContent="space-between" mt={1}>
               <Typography variant="body1" fontWeight={600}>
                 Total
               </Typography>
               <Typography variant="body1" fontWeight={600}>
-                {total ?? 0} AED
+                {total.toFixed(2)} AED
               </Typography>
             </Stack>
           </>
