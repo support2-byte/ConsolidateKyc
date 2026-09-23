@@ -28,6 +28,7 @@ import {
   CheckCircle as CheckIcon,
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
+import AddressPicker from "../components/AddressPicker";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -77,6 +78,8 @@ const DELIVERY_OPTIONS = [
   { key: "expressDelivery", label: "Express Delivery", amount: 70 },
 ];
 
+const DEFAULT_BASE_DELIVERY_RATE = 0;
+
 const SectionHeader = ({
   title,
   subtitle,
@@ -122,6 +125,9 @@ const fieldSx = {
 export default function DeliveryRequestForm() {
   const { itemRef } = useParams<{ itemRef: string }>();
 
+  const [baseDeliveryRate, setBaseDeliveryRate] = useState<number>(
+    DEFAULT_BASE_DELIVERY_RATE,
+  );
   const [form, setForm] = useState<FormState>(initialForm);
   const [options, setOptions] = useState<Record<string, boolean>>({});
   const [itemDetails, setItemDetails] = useState<ItemDetails | null>(null);
@@ -173,6 +179,29 @@ export default function DeliveryRequestForm() {
     fetchItem();
   }, [itemRef]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchRate = async () => {
+      try {
+        const res = await fetch(`${API_URL}/options/system-settings`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const setting = (data.data || []).find(
+          (s: { key: string }) => s.key === "delivery_rate",
+        );
+        if (!cancelled && setting) {
+          setBaseDeliveryRate(Number(setting.value));
+        }
+      } catch {}
+    };
+
+    fetchRate();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ): void => {
@@ -189,9 +218,9 @@ export default function DeliveryRequestForm() {
   const deliveryAmount = useMemo<number>(() => {
     return DELIVERY_OPTIONS.reduce(
       (sum, option) => (options[option.key] ? sum + option.amount : sum),
-      0,
+      baseDeliveryRate,
     );
-  }, [options]);
+  }, [options, baseDeliveryRate]);
 
   const isFormValid = useMemo<boolean>(() => {
     return Boolean(
@@ -533,16 +562,12 @@ export default function DeliveryRequestForm() {
                   title="Delivery Address"
                   subtitle="Full destination address for this shipment"
                 />
-                <TextField
-                  fullWidth
-                  required
-                  multiline
-                  minRows={3}
+                <AddressPicker
                   label="Delivery Address"
-                  name="deliveryAddress"
                   value={form.deliveryAddress}
-                  onChange={handleChange}
-                  variant="outlined"
+                  onChange={(address) =>
+                    setForm((prev) => ({ ...prev, deliveryAddress: address }))
+                  }
                   sx={fieldSx}
                 />
               </Paper>
@@ -560,6 +585,30 @@ export default function DeliveryRequestForm() {
                   title="Delivery Options"
                   subtitle="Select the services required for this delivery"
                 />
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{
+                    px: 2,
+                    py: 1.25,
+                    mb: 1.5,
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: 2,
+                    bgcolor: "#fafbfc",
+                  }}
+                >
+                  <Typography variant="body2" fontWeight={600}>
+                    Base Delivery Charge
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    fontWeight={600}
+                    color={colors.textMain}
+                  >
+                    AED {baseDeliveryRate.toFixed(2)}
+                  </Typography>
+                </Stack>
                 <FormGroup sx={{ gap: 1.5 }}>
                   {DELIVERY_OPTIONS.map((option) => (
                     <Stack

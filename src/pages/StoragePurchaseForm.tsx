@@ -45,11 +45,15 @@ const colors = {
   danger: "#dc2626",
 };
 
-const RATE_PER_CARTON = 1.0;
+interface SizeOption {
+  key: string;
+  label: string;
+  rate: number;
+}
 
-const MONTH_OPTIONS = [1, 2, 3, 6, 9, 12, 18, 24];
-const UNIT_OPTIONS = ["sq ft", "sq m", "pallets", "cbm"];
-const DAYS_PER_MONTH = 30;
+const DEFAULT_RATE_PER_CARTON = 1.0;
+
+const MAX_DURATION_DAYS = 30;
 
 interface ItemDetails {
   category: string | null;
@@ -105,17 +109,20 @@ const fieldSx = {
 export default function StoragePurchaseForm() {
   const { itemRef } = useParams<{ itemRef: string }>();
 
-  const [durationMonths, setDurationMonths] = useState<number>(
-    MONTH_OPTIONS[0],
-  );
-  const [sizeValue, setSizeValue] = useState<string>("");
-  const [sizeUnit, setSizeUnit] = useState<string>(UNIT_OPTIONS[0]);
+  const [durationDays, setDurationDays] = useState<number>(1);
+  const [durationDaysInput, setDurationDaysInput] = useState<string>("1");
   const [category, setCategory] = useState<string>("");
   const [subcategory, setSubcategory] = useState<string>("");
   const [requiredFrom, setRequiredFrom] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(0);
   const [quantityInput, setQuantityInput] = useState<string>("0");
+  const [ratePerCarton, setRatePerCarton] = useState<number>(
+    DEFAULT_RATE_PER_CARTON,
+  );
+
+  const [sizeOptions, setSizeOptions] = useState<SizeOption[]>([]);
+  const [sizeKey, setSizeKey] = useState<string>("");
 
   const [itemDetails, setItemDetails] = useState<ItemDetails | null>(null);
   const [itemLoading, setItemLoading] = useState<boolean>(true);
@@ -174,6 +181,47 @@ export default function StoragePurchaseForm() {
     fetchItem();
   }, [itemRef]);
 
+  // Fetch dynamic rates: base carton/day rate + all "Storage Size" options
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchRates = async () => {
+      try {
+        const res = await fetch(`${API_URL}/options/system-settings`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const all = data.data || [];
+
+        const storageRate = all.find(
+          (s: { key: string }) => s.key === "storage_rate",
+        );
+        if (!cancelled && storageRate) {
+          setRatePerCarton(Number(storageRate.value));
+        }
+
+        const sizes: SizeOption[] = all
+          .filter((s: { category: string }) => s.category === "Storage Size")
+          .map((s: { key: string; label: string; value: string }) => ({
+            key: s.key,
+            label: s.label,
+            rate: Number(s.value),
+          }));
+
+        if (!cancelled) {
+          setSizeOptions(sizes);
+          setSizeKey((prev) => prev || (sizes.length ? sizes[0].key : ""));
+        }
+      } catch {
+        // silently ignore — form still usable with default carton rate, empty size options
+      }
+    };
+
+    fetchRates();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const clampQuantity = (value: number): number => {
     if (Number.isNaN(value)) return 0;
     if (value < 0) return 0;
@@ -203,42 +251,64 @@ export default function StoragePurchaseForm() {
     commitQuantity(Number.isNaN(parsed) ? 0 : parsed);
   };
 
-  const handleSizeValueChange = (
+  const clampDurationDays = (value: number): number => {
+    if (Number.isNaN(value)) return 0;
+    if (value < 0) return 0;
+    if (value > MAX_DURATION_DAYS) return MAX_DURATION_DAYS;
+    return Math.floor(value);
+  };
+
+  const handleDurationDaysInputChange = (
     event: ChangeEvent<HTMLInputElement>,
   ): void => {
     const raw = event.target.value;
-    if (/^\d*\.?\d*$/.test(raw)) {
-      setSizeValue(raw);
+    if (raw === "" || /^\d+$/.test(raw)) {
+      const clamped = raw === "" ? 0 : clampDurationDays(parseInt(raw, 10));
+      setDurationDaysInput(raw === "" ? "" : String(clamped));
+      setDurationDays(clamped);
     }
   };
 
+  const handleDurationDaysInputBlur = (): void => {
+    const parsed = parseInt(durationDaysInput, 10);
+    const clamped = clampDurationDays(Number.isNaN(parsed) ? 0 : parsed);
+    setDurationDays(clamped);
+    setDurationDaysInput(String(clamped));
+  };
+
+  const selectedSize = useMemo(
+    () => sizeOptions.find((s) => s.key === sizeKey) ?? null,
+    [sizeOptions, sizeKey],
+  );
+
   const amount = useMemo<number>(() => {
-    return quantity * RATE_PER_CARTON * durationMonths * DAYS_PER_MONTH;
-  }, [quantity, durationMonths]);
+    const cartonCost = quantity * ratePerCarton * durationDays;
+    const sizeCost = (selectedSize?.rate ?? 0) * durationDays;
+    return cartonCost + sizeCost;
+  }, [quantity, durationDays, ratePerCarton, selectedSize]);
 
   const isFormValid = useMemo<boolean>(() => {
     return Boolean(
       itemRef &&
       quantity > 0 &&
       (!maxQuantity || quantity <= maxQuantity) &&
-      Number(sizeValue) > 0 &&
-      sizeUnit &&
+      sizeKey &&
       category.trim() &&
       subcategory.trim() &&
       requiredFrom &&
-      durationMonths > 0,
+      durationDays > 0,
     );
   }, [
     itemRef,
     quantity,
     maxQuantity,
-    sizeValue,
-    sizeUnit,
+    sizeKey,
     category,
     subcategory,
     requiredFrom,
-    durationMonths,
+    durationDays,
   ]);
+
   async function submitStoragePurchase() {
     const res = await fetch(`${API_URL}/storage`, {
       method: "POST",
@@ -247,12 +317,12 @@ export default function StoragePurchaseForm() {
         customerRef: itemDetails?.customerRef,
         shipmentRef: itemRef,
         storage: Number(quantity),
-        sizeValue: Number(sizeValue),
-        sizeUnit,
+        sizeKey,
+        sizeLabel: selectedSize?.label ?? null,
         category: category.trim(),
         subcategory: subcategory.trim(),
         requiredFrom,
-        durationMonths,
+        durationDays,
         notes: notes.trim() || null,
         amount,
       }),
@@ -527,34 +597,19 @@ export default function StoragePurchaseForm() {
                   subtitle="Tell us what you need to store, from when, and for how long"
                 />
                 <Grid container spacing={2.5}>
-                  <Grid size={{ xs: 12, lg: 2 }}>
-                    <TextField
-                      fullWidth
-                      label="Size"
-                      value={sizeValue}
-                      onChange={handleSizeValueChange}
-                      slotProps={{
-                        htmlInput: {
-                          inputMode: "decimal",
-                          style: { fontWeight: 600 },
-                        },
-                      }}
-                      sx={fieldSx}
-                    />
-                  </Grid>
-                  <Grid size={{ xs: 12, lg: 2 }}>
+                  <Grid size={{ xs: 12, lg: 4 }}>
                     <TextField
                       select
                       fullWidth
-                      label="Unit"
-                      value={sizeUnit}
-                      onChange={(e) => setSizeUnit(e.target.value)}
+                      label="Storage Size"
+                      value={sizeKey}
+                      onChange={(e) => setSizeKey(e.target.value)}
                       variant="outlined"
                       sx={fieldSx}
                     >
-                      {UNIT_OPTIONS.map((u) => (
-                        <MenuItem key={u} value={u}>
-                          {u}
+                      {sizeOptions.map((s) => (
+                        <MenuItem key={s.key} value={s.key}>
+                          {s.label} (AED {s.rate.toFixed(2)})
                         </MenuItem>
                       ))}
                     </TextField>
@@ -595,22 +650,28 @@ export default function StoragePurchaseForm() {
                   </Grid>
                   <Grid size={{ xs: 12, lg: 4 }}>
                     <TextField
-                      select
                       fullWidth
-                      label="Expected Duration (Months)"
-                      value={durationMonths}
-                      onChange={(e) =>
-                        setDurationMonths(Number(e.target.value))
-                      }
-                      variant="outlined"
+                      label="Expected Duration (Days)"
+                      value={durationDaysInput}
+                      onChange={handleDurationDaysInputChange}
+                      onBlur={handleDurationDaysInputBlur}
+                      inputProps={{
+                        inputMode: "numeric",
+                        pattern: "[0-9]*",
+                        style: { fontWeight: 600 },
+                      }}
                       sx={fieldSx}
+                    />
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: colors.textMuted,
+                        mt: 0.5,
+                        display: "block",
+                      }}
                     >
-                      {MONTH_OPTIONS.map((m) => (
-                        <MenuItem key={m} value={m}>
-                          {m} {m === 1 ? "month" : "months"}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                      Max {MAX_DURATION_DAYS} days
+                    </Typography>
                   </Grid>
                   <Grid size={{ xs: 12, lg: 4 }}>
                     <TextField
@@ -689,9 +750,19 @@ export default function StoragePurchaseForm() {
                       Cost per day
                     </Typography>
                     <Typography variant="body2" fontWeight={600}>
-                      AED {RATE_PER_CARTON.toFixed(2)} per carton
+                      AED {ratePerCarton.toFixed(2)} per carton
                     </Typography>
                   </Stack>
+                  {selectedSize && (
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography variant="body2" color={colors.textMuted}>
+                        Storage Size ({selectedSize.label})
+                      </Typography>
+                      <Typography variant="body2" fontWeight={600}>
+                        AED {selectedSize.rate.toFixed(2)} per day
+                      </Typography>
+                    </Stack>
+                  )}
                 </Stack>
                 <Divider sx={{ my: 2 }} />
                 <Stack
@@ -704,7 +775,7 @@ export default function StoragePurchaseForm() {
                     fontWeight={700}
                     color={colors.textMain}
                   >
-                    Total Cost
+                    Total Cost (Estimated)
                   </Typography>
                   <Typography
                     variant="subtitle1"
@@ -714,6 +785,20 @@ export default function StoragePurchaseForm() {
                     AED {amount.toFixed(2)}
                   </Typography>
                 </Stack>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    display: "block",
+                    mt: 1,
+                    color: colors.danger,
+                    fontWeight: 500,
+                  }}
+                >
+                  * This is an estimated amount only. The final amount will be
+                  confirmed once our team assigns the storage type for your
+                  shipment. Each type carries its own rate, which will be added
+                  to this total.
+                </Typography>
               </Paper>
 
               <Box sx={{ pt: 2, pb: 4 }}>
