@@ -58,6 +58,14 @@ const formatCurrency = (amount: number | null | undefined): string => {
   }).format(amount);
 };
 
+const formatStorageType = (value: string | null | undefined): string => {
+  if (!value) return "—";
+  return value
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+};
+
 const formatDate = (value: string | null | undefined): string => {
   if (!value) return "—";
   return new Date(value).toLocaleDateString("en-GB", {
@@ -326,7 +334,10 @@ const InvoiceTemplateCard = ({
                     display="block"
                     color={colors.textMuted}
                   >
-                    {[invoice.details.storageType, invoice.details.size]
+                    {[
+                      formatStorageType(invoice.details.storageType),
+                      invoice.details.size,
+                    ]
                       .filter(Boolean)
                       .join(" • ")}
                   </Typography>
@@ -352,6 +363,14 @@ const InvoiceTemplateCard = ({
             <Stack direction="row" justifyContent="space-between">
               <Typography variant="body2" color={colors.textMuted}>
                 Tax ({invoice.taxPercent ?? 0}%)
+              </Typography>
+              <Typography variant="body2">
+                {taxAmount.toFixed(2)} AED
+              </Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="body2" color={colors.textMuted}>
+                Discount ({invoice.discount ?? 0} AED)
               </Typography>
               <Typography variant="body2">
                 {taxAmount.toFixed(2)} AED
@@ -405,14 +424,11 @@ const RequestDetails = ({ invoice }: { invoice: InvoiceRecord }) => {
   const rows: [string, string | number | null | undefined][] =
     invoice.invoiceType === "storage"
       ? [
-          ["Storage Type", d.storageType],
+          ["Storage Type", formatStorageType(d.storageType)],
           ["Size", d.size],
           ["Quantity", d.quantity],
           ["Required From", formatDate(d.requiredFrom)],
-          [
-            "Duration",
-            d.durationMonths ? `${d.durationMonths} month(s)` : null,
-          ],
+          ["Duration", d.durationDays ? `${d.durationDays} days` : null],
           ["Notes", d.notes],
         ]
       : invoice.invoiceType === "delivery"

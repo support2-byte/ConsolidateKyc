@@ -26,6 +26,7 @@ import {
   CheckCircle as CheckIcon,
 } from "@mui/icons-material";
 import { toast } from "react-toastify";
+import AddressPicker from "../components/AddressPicker";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -73,18 +74,11 @@ const initialForm: FormState = {
   pickupDate: "",
 };
 
-const PICKUP_ZONES = [
-  { key: "dubai", label: "Dubai", amount: 50 },
-  { key: "sharjah", label: "Sharjah", amount: 70 },
-  { key: "ajman", label: "Ajman", amount: 80 },
-  { key: "abuDhabi", label: "Abu Dhabi", amount: 120 },
-  { key: "alAin", label: "Al Ain", amount: 150 },
-  {
-    key: "northernEmirates",
-    label: "Northern Emirates (RAK / Fujairah / UAQ)",
-    amount: 150,
-  },
-];
+interface PickupZone {
+  key: string;
+  label: string;
+  amount: number;
+}
 
 const todayISO = (): string => new Date().toISOString().split("T")[0];
 
@@ -140,6 +134,8 @@ export default function DropOffRequestForm() {
   const [itemError, setItemError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [submitted, setSubmitted] = useState<boolean>(false);
+  const [pickupZones, setPickupZones] = useState<PickupZone[]>([]);
+  const [zonesLoading, setZonesLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (!itemRef) return;
@@ -184,6 +180,41 @@ export default function DropOffRequestForm() {
     fetchItem();
   }, [itemRef]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchZones = async () => {
+      setZonesLoading(true);
+      try {
+        const res = await fetch(`${API_URL}/options/system-settings`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const zones = (data.data || [])
+          .filter((s: { category: string }) => s.category === "pickup_zone")
+          .sort(
+            (a: { sort_order: number }, b: { sort_order: number }) =>
+              (a.sort_order ?? 0) - (b.sort_order ?? 0),
+          )
+          .map(
+            (s: { key: string; label: string; value: string }): PickupZone => ({
+              key: s.key,
+              label: s.label,
+              amount: Number(s.value),
+            }),
+          );
+        if (!cancelled) setPickupZones(zones);
+      } catch {
+      } finally {
+        if (!cancelled) setZonesLoading(false);
+      }
+    };
+
+    fetchZones();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ): void => {
@@ -192,8 +223,8 @@ export default function DropOffRequestForm() {
   };
 
   const selectedZone = useMemo(
-    () => PICKUP_ZONES.find((zone) => zone.key === form.zone) || null,
-    [form.zone],
+    () => pickupZones.find((zone) => zone.key === form.zone) || null,
+    [form.zone, pickupZones],
   );
 
   const pickupAmount = selectedZone?.amount ?? 0;
@@ -533,16 +564,12 @@ export default function DropOffRequestForm() {
                   title="Pickup Address"
                   subtitle="Full address where the shipment will be collected"
                 />
-                <TextField
-                  fullWidth
-                  required
-                  multiline
-                  minRows={3}
+                <AddressPicker
                   label="Pickup Address"
-                  name="pickupAddress"
                   value={form.pickupAddress}
-                  onChange={handleChange}
-                  variant="outlined"
+                  onChange={(address) =>
+                    setForm((prev) => ({ ...prev, pickupAddress: address }))
+                  }
                   sx={fieldSx}
                 />
               </Paper>
@@ -594,11 +621,21 @@ export default function DropOffRequestForm() {
                       variant="outlined"
                       sx={fieldSx}
                     >
-                      {PICKUP_ZONES.map((zone) => (
-                        <MenuItem key={zone.key} value={zone.key}>
-                          {zone.label} — AED {zone.amount.toFixed(2)}
+                      {zonesLoading ? (
+                        <MenuItem value="" disabled>
+                          Loading zones...
                         </MenuItem>
-                      ))}
+                      ) : pickupZones.length === 0 ? (
+                        <MenuItem value="" disabled>
+                          No zones available
+                        </MenuItem>
+                      ) : (
+                        pickupZones.map((zone) => (
+                          <MenuItem key={zone.key} value={zone.key}>
+                            {zone.label} — AED {zone.amount.toFixed(2)}
+                          </MenuItem>
+                        ))
+                      )}
                     </TextField>
                     <Divider sx={{ my: 2 }} />
                     <Stack

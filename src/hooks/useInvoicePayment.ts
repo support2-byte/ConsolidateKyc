@@ -7,7 +7,7 @@ export interface InvoiceDetails {
   size?: string | null;
   quantity?: number | null;
   requiredFrom?: string | null;
-  durationMonths?: number | null;
+  durationDays?: number | null;
   notes?: string | null;
   deliveryContact?: string | null;
   deliveryAddress?: string | null;
@@ -31,6 +31,7 @@ export interface InvoiceRecord {
   baseRate: number | null;
   taxPercent: number | null;
   subtotal: number | null;
+  discount: number | null;
   details?: InvoiceDetails | null;
 }
 
