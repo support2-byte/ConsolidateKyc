@@ -17,7 +17,6 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  TextField,
 } from "@mui/material";
 import {
   CheckCircle as CheckIcon,
@@ -501,9 +500,6 @@ export default function InvoicePaymentForm() {
   const [paymentResult, setPaymentResult] = useState<
     "success" | "failed" | null
   >(null);
-  const [otp, setOtp] = useState<string>("");
-  const [otpVerified, setOtpVerified] = useState<boolean>(false);
-  const [otpVerifying, setOtpVerifying] = useState<boolean>(false);
 
   useEffect(() => {
     const isReturningFromPayment = searchParams.get("paid") === "1";
@@ -545,36 +541,13 @@ export default function InvoicePaymentForm() {
     };
   }, [searchParams, invoiceId]);
 
-  const handleVerifyOtp = async (): Promise<void> => {
-    if (!invoiceId) return;
-    setOtpVerifying(true);
-    try {
-      const res = await fetch(`${API_URL}/invoices/${invoiceId}/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otp }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Invalid OTP.");
-      }
-      setOtpVerified(true);
-      toast.success("OTP verified.");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Invalid OTP.");
-    } finally {
-      setOtpVerifying(false);
-    }
-  };
-
   const handlePay = async (): Promise<void> => {
-    if (!invoiceId || !otpVerified) return;
+    if (!invoiceId) return;
     setPayProcessing(true);
     try {
       const res = await fetch(`${API_URL}/invoices/${invoiceId}/ngenius`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ otp }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success || !data.data?.paymentUrl) {
@@ -859,52 +832,6 @@ export default function InvoicePaymentForm() {
                 title="Payment"
                 subtitle="Secure checkout powered by N-Genius"
               />
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={2}
-                alignItems={{ xs: "stretch", sm: "flex-start" }}
-                sx={{ mb: 3 }}
-              >
-                <TextField
-                  label="Enter OTP"
-                  value={otp}
-                  onChange={(e) =>
-                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
-                  }
-                  disabled={otpVerified}
-                  helperText={
-                    otpVerified
-                      ? "OTP verified"
-                      : "Enter the 6-digit code from your invoice email"
-                  }
-                  slotProps={{
-                    htmlInput: {
-                      inputMode: "numeric",
-                      maxLength: 6,
-                      style: { letterSpacing: 6, fontWeight: 600 },
-                    },
-                  }}
-                  sx={{ maxWidth: 280 }}
-                />
-                <Button
-                  variant="outlined"
-                  onClick={handleVerifyOtp}
-                  disabled={otpVerified || otpVerifying || otp.length !== 6}
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 600,
-                    height: 56,
-                    borderColor: colors.primary,
-                    color: colors.primary,
-                  }}
-                >
-                  {otpVerifying
-                    ? "Verifying..."
-                    : otpVerified
-                      ? "Verified"
-                      : "Verify OTP"}
-                </Button>
-              </Stack>
               <Stack
                 direction={{ xs: "column", sm: "row" }}
                 alignItems={{ xs: "flex-start", sm: "center" }}
