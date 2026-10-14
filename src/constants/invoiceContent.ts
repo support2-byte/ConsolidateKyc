@@ -1,0 +1,43 @@
+export const COMPANY = {
+  name: "Royal Gulf Shipping & Logistics",
+  addressLines: [
+    "Plot #613-1130, Shed# 1 and 4",
+    "Ras al Khor Industrial Area",
+    "Dubai UAE 27011",
+    "U.A.E",
+  ],
+  phone: "+971 4 333 1785",
+  mobile: "+971 50 972 4214",
+  email: "info@royalgulfshipping.com",
+  bank: [
+    "M/s: Royal Gulf Shipping & Logistics",
+    "Bank Name : Habib Bank AG Zurich",
+    "Bank Branch : Bur Dubai",
+    "Account Title : Royal Gulf Shipping & Logistics LLC",
+    "",
+    "Account No: 02-02-08-020311-105-0574843",
+    "IBAN No: AE56 0290 8902 1050 0574 843",
+    "Swift Code : HBZUAEAD",
+  ],
+};
+
+export const DEFAULT_TERMS = [
+  "In case Customer fails to pay the monthly rent payments for consecutive two months Warehouse reserves the right to dispose off /auction cargo in order to recover the pending outstanding payments.",
+  "Warehouse its owners/partners will be free for any liability arising due to non payment of monthly rent payments.",
+  "All responsibility for the cargo stored within the Warehouse premises pertaining to product its brand, Expiry and made lies to the owner of the cargo if any discrepancy is found by the laws of U.A.E",
+  "Warehouse its owners/partners will not be responsible for any contents of cargo or nature of cargo stored within Warehouse premises as this is the sole liability of the customer/owner of cargo.",
+  "All the goods stored should be the property of agreement customer as non of the 3rd parties cargo can be stored under their trade license which is not the property of the agreement customer.",
+  "The contract can anytime be terminated by the Warehouse depending upon space availability with immediate effect.",
+  "Warehouse reserve the right to terminate the contract in case of any misbehaviour or if found not complying with the warehouse terms and conditions.",
+  "Warehouse will inform customer for the termination of the contract before one month for pre- arrangements and shifting of cargo.",
+  "Customer should inform the warehouse owner before two months if they don’t want to continue the premises availability for the remaining period of the contract. Failure to do so one month extra rent will be charged to customer.",
+  "Customer shall pay the amount agreed for warehousing in full monthly cheques for 10th of every month in advance.",
+  "Warehouse operator/owner does not provide any insurance for stock being stored under the premises unless agreed in written by 3rd party insurance broker separately.",
+  "In case of any rents cheque return the contract will be immediately terminated without any notice and customer will abide to vacate the place within 03 working days.",
+  "Warehouse can increase the rent of the premises depending upon the market conditions, subject to one month prior notice to customer for the same.",
+  "Validity of contract can anytime be terminated if any mis-behaviour or non professional attitude from the representative of the customer is noticed.",
+  "One Key for the locks applied at the door will be kept with Warehouse supervisor for in case of emergency access.",
+  "Total cargo movements In/Out will be recorded by customer itself as Warehouse is not liable to keep any track of cargo movements In/Out and will not undertake any responsibility for any loss / damage of the cargo.",
+  "Customer has to maintain his own cargo inventory.",
+  "Warehouse will not give access to any one in Sheds premises prior written confirmation from customers.",
+];
