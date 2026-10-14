@@ -29,11 +29,12 @@ import {
   type OrderRecord,
   type ReceiverRecord,
 } from "../hooks/useInvoicePayment";
+import { COMPANY, DEFAULT_TERMS } from "../constants/invoiceContent";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-const TEAL = "#1a7a6e";
-const ORANGE = "#e07b2a";
+const TEAL = "#0d6c6a";
+const ORANGE = "#f58220";
 
 const colors = {
   primary: TEAL,
@@ -47,6 +48,10 @@ const colors = {
   success: "#16a34a",
   danger: "#dc2626",
   warning: "#d97706",
+  gold: "#ddbe3c",
+  dark: "#3a3a3a",
+  light: "#f5f5f5",
+  borderGrey: "#d2d2d2",
 };
 
 const formatCurrency = (amount: number | null | undefined): string => {
@@ -170,12 +175,74 @@ const InvoiceTemplateCard = ({
 }) => {
   const isOverstay = invoice.invoiceType === "overstayed";
   const meta = INVOICE_META[invoice.invoiceType] ?? INVOICE_META.overstayed;
-  const subtotal = invoice.subtotal ?? invoice.amount;
-  const taxAmount = subtotal * ((Number(invoice.taxPercent) || 0) / 100);
+  const title = meta.heading
+    .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+    .join(" ");
+  const total = Number(invoice.amount) || 0;
+  const subtotal = Number(invoice.subtotal ?? invoice.amount) || 0;
+  const taxPercent = Number(invoice.taxPercent) || 0;
+  const taxAmount = isOverstay ? subtotal * (taxPercent / 100) : 0;
   const discount = Number(invoice.discount) || 0;
-  const total = invoice.amount;
+  const hasTax = taxPercent > 0 && isOverstay;
+  const itemAmount = isOverstay ? subtotal : total;
+  const qty = isOverstay ? Number(invoice.overstayDays) || 0 : 1;
+  const rate = isOverstay ? Number(invoice.baseRate) || 0 : total;
   const commodityLabel =
     [invoice.category, invoice.subcategory].filter(Boolean).join(" - ") || "—";
+  const storageDetail =
+    invoice.invoiceType === "storage" && invoice.details
+      ? [formatStorageType(invoice.details.storageType), invoice.details.size]
+          .filter(Boolean)
+          .join(" • ")
+      : "";
+  const subLine = [commodityLabel, storageDetail].filter(Boolean).join("  ");
+  const num = (n: number, d = 3) =>
+    n.toLocaleString("en-US", {
+      minimumFractionDigits: d,
+      maximumFractionDigits: d,
+    });
+  const date = formatDate(invoice.createdAt);
+  const address =
+    invoice.invoiceType === "dropoff"
+      ? invoice.details?.pickupAddress
+      : invoice.details?.deliveryAddress;
+
+  const metaRows: [string, string | number | null | undefined][] = [
+    ["Invoice Date", date],
+    ["Terms", "Due on Receipt"],
+    ["Due Date", date],
+    ["Order Number", order?.formNumber],
+    ["Commodity", commodityLabel],
+    ...(address
+      ? ([
+          [
+            invoice.invoiceType === "dropoff" ? "Pickup Address" : "Address",
+            address,
+          ],
+        ] as [string, string][])
+      : []),
+    ...(isOverstay
+      ? ([["Overstayed", `${invoice.overstayDays ?? 0} day(s)`]] as [
+          string,
+          string,
+        ][])
+      : []),
+  ];
+
+  const headCell = {
+    color: "#fff",
+    bgcolor: colors.dark,
+    fontWeight: 600,
+    fontSize: 12,
+    py: 1.25,
+    borderBottom: "none",
+  };
+  const bodyCell = {
+    fontSize: 13,
+    color: colors.textMain,
+    borderColor: "#aaa",
+    verticalAlign: "top",
+  };
 
   return (
     <Paper
@@ -191,243 +258,332 @@ const InvoiceTemplateCard = ({
           textAlign: "center",
         }}
       >
-        <Typography variant="subtitle2" fontWeight={700} letterSpacing={1}>
+        <Typography variant="h6" fontWeight={700} letterSpacing={1}>
           STORAGE & DISTRIBUTION
         </Typography>
       </Box>
 
-      <Box sx={{ p: { xs: 2.5, md: 3.5 } }}>
+      <Box sx={{ p: { xs: 2.5, md: 4 } }}>
         <Stack
-          direction="row"
+          direction={{ xs: "column", sm: "row" }}
           justifyContent="space-between"
-          alignItems="flex-start"
-          sx={{ mb: 2 }}
+          spacing={2}
+          sx={{ mb: 3 }}
         >
-          <Stack direction="row" spacing={1.5} alignItems="center">
+          <Box>
             <Box
               component="img"
               src="https://royalgulfshipping.com/wp-content/uploads/2023/08/RGSL-LOGO.png"
               alt="RGSL Logo"
-              sx={{
-                height: 40,
-                objectFit: "contain",
-              }}
+              sx={{ height: 48, objectFit: "contain", mb: 1 }}
             />
-            <Box>
-              <Typography
-                variant="subtitle1"
-                fontWeight={700}
-                sx={{ color: colors.primary }}
-              >
-                Royal Gulf Shipping & Logistics
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{ color: colors.textMuted, mb: 0 }}
-              >
-                21 6a st - Ras Al Khor Industrial Area 2 - Dubai - UAE
-              </Typography>
-            </Box>
-          </Stack>
-          <Box sx={{ textAlign: "right" }}>
             <Typography
-              variant="h6"
-              fontWeight={800}
-              sx={{ color: colors.cta, lineHeight: 1.1 }}
+              variant="body2"
+              fontWeight={700}
+              sx={{ color: "#1e1e1e" }}
             >
-              {meta.heading[0]}
+              {COMPANY.name}
+            </Typography>
+            {COMPANY.addressLines.map((line) => (
+              <Typography
+                key={line}
+                variant="caption"
+                display="block"
+                sx={{ color: "#3c3c3c", lineHeight: 1.4 }}
+              >
+                {line}
+              </Typography>
+            ))}
+          </Box>
+          <Box sx={{ textAlign: { xs: "left", sm: "right" } }}>
+            <Typography
+              sx={{ color: colors.gold, fontSize: 30, lineHeight: 1.2 }}
+            >
+              {title}
+            </Typography>
+            <Typography variant="body2" fontWeight={700}>
+              Invoice# {invoice.invoiceId}
             </Typography>
             <Typography
-              variant="h6"
-              fontWeight={800}
-              sx={{ color: colors.cta, lineHeight: 1.1 }}
+              variant="caption"
+              fontWeight={700}
+              display="block"
+              sx={{ mt: 2 }}
             >
-              {meta.heading[1]}
+              Balance Due
+            </Typography>
+            <Typography variant="h6" fontWeight={700}>
+              AED {num(total)}
             </Typography>
           </Box>
         </Stack>
 
-        <Divider sx={{ mb: 2 }} />
-
-        <Grid container spacing={1.5} sx={{ mb: 2 }}>
-          <InfoField label="Invoice #" value={invoice.invoiceId} />
-          <InfoField
-            label="Invoice Date"
-            value={formatDate(invoice.createdAt)}
-          />
-          <InfoField label="Terms" value="Due on Receipt" />
-          <InfoField label="Order Ref" value={order?.formNumber} />
-          <InfoField label="Commodity" value={commodityLabel} />
-          <InfoField
-            label={
-              invoice.invoiceType === "dropoff" ? "Pickup Address" : "Address"
-            }
-            value={
-              invoice.invoiceType === "dropoff"
-                ? invoice.details?.pickupAddress
-                : invoice.details?.deliveryAddress
-            }
-          />
-          {isOverstay && (
-            <InfoField
-              label="Overstayed"
-              value={`${invoice.overstayDays ?? 0} day(s)`}
-            />
-          )}
-        </Grid>
-
-        <Box
-          sx={{ bgcolor: "#f2f4f5", borderRadius: 1, px: 1.5, py: 1, mb: 2 }}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          spacing={3}
+          sx={{ mb: 3 }}
         >
-          <Typography
-            variant="caption"
-            fontWeight={700}
-            color={colors.textMain}
-          >
-            Bill To
-          </Typography>
-          <Typography
-            variant="body2"
-            fontWeight={700}
-            sx={{ color: "#c0392b" }}
-          >
-            {receiver?.receiverName || "N/A"}
-          </Typography>
-          {receiver?.receiverContact && (
-            <Typography variant="caption" color={colors.textMuted}>
-              {receiver.receiverContact}
+          <Box sx={{ pt: { sm: 6 } }}>
+            <Typography variant="body2" sx={{ color: "#3c3c3c" }}>
+              Bill To
             </Typography>
-          )}
-        </Box>
-
-        <Table size="small" sx={{ mb: 2 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 700, width: 32 }}>#</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
-              <TableCell sx={{ fontWeight: 700 }} align="right">
-                Amount
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            <TableRow>
-              <TableCell sx={{ verticalAlign: "top", color: "#c0392b" }}>
-                1
-              </TableCell>
-              <TableCell>
+            <Typography
+              variant="body2"
+              fontWeight={700}
+              sx={{ textTransform: "uppercase" }}
+            >
+              {receiver?.receiverName || "N/A"}
+            </Typography>
+            {receiver?.receiverContact && (
+              <Typography variant="body2" sx={{ color: "#3c3c3c" }}>
+                {receiver.receiverContact}
+              </Typography>
+            )}
+          </Box>
+          <Box sx={{ minWidth: { sm: 320 } }}>
+            {metaRows.map(([label, value]) => (
+              <Stack
+                key={label}
+                direction="row"
+                justifyContent="space-between"
+                spacing={2}
+                sx={{ py: 0.75 }}
+              >
+                <Typography variant="body2" sx={{ color: "#3c3c3c" }}>
+                  {label} :
+                </Typography>
                 <Typography
                   variant="body2"
-                  fontWeight={700}
-                  color={colors.primary}
+                  sx={{ color: "#3c3c3c", textAlign: "right", maxWidth: 200 }}
                 >
+                  {value === null || value === undefined || value === ""
+                    ? "N/A"
+                    : value}
+                </Typography>
+              </Stack>
+            ))}
+          </Box>
+        </Stack>
+
+        <Box sx={{ overflowX: "auto" }}>
+          <Table size="small" sx={{ minWidth: 520 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ ...headCell, width: 32 }} align="center">
+                  #
+                </TableCell>
+                <TableCell sx={headCell}>Item & Description</TableCell>
+                <TableCell sx={headCell} align="right">
+                  Qty
+                </TableCell>
+                <TableCell sx={headCell} align="right">
+                  Rate
+                </TableCell>
+                <TableCell sx={headCell} align="right">
+                  Tax
+                </TableCell>
+                <TableCell sx={headCell} align="right">
+                  Amount
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              <TableRow>
+                <TableCell sx={bodyCell} align="center">
+                  1
+                </TableCell>
+                <TableCell sx={bodyCell}>
                   {meta.description}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  display="block"
-                  color={colors.textMuted}
-                >
-                  {commodityLabel}
-                </Typography>
-                {isOverstay ? (
                   <Typography
                     variant="caption"
                     display="block"
-                    color={colors.textMuted}
+                    sx={{ color: "#5a5a5a" }}
                   >
-                    {invoice.overstayDays ?? 0} day(s) x{" "}
-                    {formatCurrency(invoice.baseRate)}
+                    {subLine}
                   </Typography>
-                ) : invoice.invoiceType === "storage" && invoice.details ? (
+                </TableCell>
+                <TableCell sx={bodyCell} align="right">
+                  {num(qty, 2)}
                   <Typography
                     variant="caption"
                     display="block"
-                    color={colors.textMuted}
+                    sx={{ color: "#5a5a5a" }}
                   >
-                    {[
-                      formatStorageType(invoice.details.storageType),
-                      invoice.details.size,
-                    ]
-                      .filter(Boolean)
-                      .join(" • ")}
+                    {isOverstay ? "DAY" : "NO"}
                   </Typography>
-                ) : null}
-              </TableCell>
-              <TableCell align="right" sx={{ verticalAlign: "top" }}>
-                <Typography variant="body2" fontWeight={700} color="#c0392b">
-                  {(isOverstay ? subtotal : invoice.amount).toFixed(2)} AED
-                </Typography>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+                </TableCell>
+                <TableCell sx={bodyCell} align="right">
+                  {num(rate)}
+                </TableCell>
+                <TableCell sx={bodyCell} align="right">
+                  {hasTax ? num(taxAmount) : "-"}
+                  <Typography
+                    variant="caption"
+                    display="block"
+                    sx={{ color: "#5a5a5a" }}
+                  >
+                    {hasTax ? `${num(taxPercent, 2)}%` : "-"}
+                  </Typography>
+                </TableCell>
+                <TableCell sx={bodyCell} align="right">
+                  {num(itemAmount)}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </Box>
 
-        {isOverstay && (
-          <>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2" color={colors.textMuted}>
-                Subtotal
+        <Box sx={{ ml: "auto", mt: 1, maxWidth: 360 }}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            sx={{ py: 1, borderBottom: "1px solid #aaa" }}
+          >
+            <Typography variant="body2" fontWeight={700}>
+              Sub Total
+            </Typography>
+            <Typography variant="body2">{num(itemAmount)}</Typography>
+          </Stack>
+          {discount > 0 && (
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              sx={{ py: 1 }}
+            >
+              <Typography variant="body2" fontWeight={700}>
+                Discount
               </Typography>
-              <Typography variant="body2">{subtotal.toFixed(2)} AED</Typography>
+              <Typography variant="body2">- AED {num(discount)}</Typography>
             </Stack>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2" color={colors.textMuted}>
-                Tax ({invoice.taxPercent ?? 0}%)
-              </Typography>
-              <Typography variant="body2">
-                {taxAmount.toFixed(2)} AED
-              </Typography>
-            </Stack>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="body2" color={colors.textMuted}>
-                Discount (AED)
-              </Typography>
-              <Typography variant="body2">{discount.toFixed(2)} AED</Typography>
-            </Stack>
-            <Stack direction="row" justifyContent="space-between" mt={1}>
-              <Typography variant="body1" fontWeight={600}>
-                Total
-              </Typography>
-              <Typography variant="body1" fontWeight={600}>
-                {total.toFixed(2)} AED
-              </Typography>
-            </Stack>
-          </>
-        )}
+          )}
+          <Stack direction="row" justifyContent="space-between" sx={{ py: 1 }}>
+            <Typography variant="body2" fontWeight={700}>
+              Total
+            </Typography>
+            <Typography variant="body2" fontWeight={700}>
+              AED {num(total)}
+            </Typography>
+          </Stack>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            sx={{ py: 1.25, px: 1.5, bgcolor: colors.light }}
+          >
+            <Typography variant="body2" fontWeight={700}>
+              Balance Due
+            </Typography>
+            <Typography variant="body2" fontWeight={700}>
+              AED {num(total)}
+            </Typography>
+          </Stack>
+        </Box>
 
-        <Typography
-          variant="caption"
-          sx={{
-            display: "block",
-            mt: 3,
-            color: colors.textMuted,
-            fontStyle: "italic",
-          }}
-        >
-          Charges apply after the 3 free-day period following shipment delivery.
+        <Typography sx={{ mt: 4, mb: 1, color: "#3c3c3c" }}>
+          Tax Summary
         </Typography>
-        <Typography variant="body2" sx={{ mt: 1.5, color: colors.textMain }}>
+        <Box sx={{ overflowX: "auto" }}>
+          <Table size="small" sx={{ minWidth: 420 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={headCell}>Tax Details</TableCell>
+                <TableCell sx={headCell} align="right">
+                  Taxable Amount (AED)
+                </TableCell>
+                <TableCell sx={headCell} align="right">
+                  Tax Amount (AED)
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {[
+                [
+                  `Standard Rate (${num(taxPercent || 5, 0)}%)`,
+                  hasTax ? subtotal : 0,
+                  hasTax ? taxAmount : 0,
+                  false,
+                ],
+                ["Exempt", hasTax ? 0 : itemAmount, 0, false],
+                ["Total", itemAmount, taxAmount, true],
+              ].map(([label, taxable, tax, bold]) => (
+                <TableRow key={label as string}>
+                  <TableCell sx={{ ...bodyCell, fontWeight: bold ? 700 : 400 }}>
+                    {label as string}
+                  </TableCell>
+                  <TableCell
+                    sx={{ ...bodyCell, fontWeight: bold ? 700 : 400 }}
+                    align="right"
+                  >
+                    {num(taxable as number)}
+                  </TableCell>
+                  <TableCell
+                    sx={{ ...bodyCell, fontWeight: bold ? 700 : 400 }}
+                    align="right"
+                  >
+                    {num(tax as number)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
+
+        <Typography sx={{ mt: 4, mb: 1, color: "#3c3c3c" }}>Notes</Typography>
+        <Typography variant="caption" display="block">
+          {meta.note}
+        </Typography>
+        <Typography variant="caption" display="block" sx={{ mb: 1.5 }}>
           Thanks for your business.
         </Typography>
+        {COMPANY.bank.map((line, i) => (
+          <Typography
+            key={i}
+            variant="caption"
+            display="block"
+            sx={{ minHeight: 14 }}
+          >
+            {line}
+          </Typography>
+        ))}
+
+        <Typography sx={{ mt: 4, mb: 1, color: "#3c3c3c" }}>
+          Terms & Conditions
+        </Typography>
+        <Typography variant="caption" display="block">
+          Warehousing & Storage Contract.
+        </Typography>
+        <Typography variant="caption" display="block" sx={{ mb: 1.5 }}>
+          Warehouse & Storage Terms & Conditions:
+        </Typography>
+        <Stack spacing={0.5}>
+          {DEFAULT_TERMS.map((term, i) => (
+            <Stack key={i} direction="row" spacing={1}>
+              <Typography sx={{ fontSize: 11, minWidth: 20 }}>
+                {i + 1}.
+              </Typography>
+              <Typography sx={{ fontSize: 11 }}>{term}</Typography>
+            </Stack>
+          ))}
+        </Stack>
       </Box>
 
       <Box
         sx={{
           bgcolor: colors.primary,
           color: "#fff",
-          py: 1.25,
+          py: 1.5,
           px: 3,
           display: "flex",
           justifyContent: "space-between",
           flexWrap: "wrap",
           gap: 1,
-          mt: 10,
         }}
       >
-        <Typography variant="caption">Tel: +971 50 972 4214</Typography>
-        <Typography variant="caption">
-          Email: info@royalgulfshipping.com
+        <Typography variant="caption" fontWeight={700}>
+          Tel: {COMPANY.phone} | Mob: {COMPANY.mobile}
+        </Typography>
+        <Typography variant="caption" fontWeight={700}>
+          Email: {COMPANY.email}
         </Typography>
       </Box>
     </Paper>
