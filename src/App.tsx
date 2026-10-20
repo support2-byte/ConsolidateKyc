@@ -9,6 +9,7 @@ import DeliveryRequestForm from "./pages/DeliveryRequestPage";
 import StoragePurchaseForm from "./pages/StoragePurchaseForm";
 import DropOffRequestForm from "./pages/DropOffForm";
 import { ToastContainer } from "react-toastify";
+import NotFound from "./pages/NotFound";
 
 export default function App() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
           element={<DropOffRequestForm />}
         />
         <Route path="unauthorized" element={<Unauthorized />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <ToastContainer stacked position="bottom-right" theme="dark" />
     </BrowserRouter>
