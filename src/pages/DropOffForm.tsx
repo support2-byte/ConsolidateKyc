@@ -190,7 +190,10 @@ export default function DropOffRequestForm() {
         if (!res.ok) return;
         const data = await res.json();
         const zones = (data.data || [])
-          .filter((s: { category: string }) => s.category === "pickup_zone")
+          .filter(
+            (s: { category: string }) =>
+              s.category === "pickup_zone" || s.category === "Pickup Zone",
+          )
           .sort(
             (a: { sort_order: number }, b: { sort_order: number }) =>
               (a.sort_order ?? 0) - (b.sort_order ?? 0),
