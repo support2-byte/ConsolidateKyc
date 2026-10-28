@@ -127,10 +127,10 @@ export default function NotFound() {
         >
           Need help? Contact{" "}
           <Link
-            href="mailto:support@yourcompany.com"
+            href="mailto:support@royalgulfshipping.com"
             sx={{ color: colors.primary, fontWeight: 600 }}
           >
-            support@yourcompany.com
+            support@royalgulfshipping.com
           </Link>
         </Typography>
       </Box>

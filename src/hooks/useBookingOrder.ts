@@ -66,13 +66,16 @@ export function useBookingOrder(
 
   useEffect(() => {
     if (!formId || !type) return;
+    const controller = new AbortController();
 
     const fetchOrder = async (): Promise<void> => {
       setLoading(true);
       setError(null);
 
       try {
-        const res = await fetch(`${API_URL}/booking/${formId}/${type}`);
+        const res = await fetch(`${API_URL}/booking/${formId}/${type}`, {
+          signal: controller.signal,
+        });
 
         if (res.status === 403) {
           navigate("/unauthorized", { replace: true });
@@ -95,6 +98,7 @@ export function useBookingOrder(
         setCompany(data.company ?? null);
         setOrder(data.order ?? null);
       } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
         setError(
           err instanceof Error
             ? err.message
@@ -106,6 +110,7 @@ export function useBookingOrder(
     };
 
     fetchOrder();
+    return () => controller.abort();
   }, [formId, type, navigate]);
 
   return {

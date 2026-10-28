@@ -388,8 +388,10 @@ export default function BookingConfirmationForm() {
   };
 
   const isFormValid = useMemo<boolean>(() => {
-    return Boolean(form.passportNumber && form.expectedDate && hasSignature);
-  }, [form.passportNumber, form.expectedDate, hasSignature]);
+    return Boolean(
+      form.passportNumber && form.expectedDate && hasSignature && passportDoc,
+    );
+  }, [form.passportNumber, form.expectedDate, hasSignature, passportDoc]);
 
   const goToPreview = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -400,6 +402,11 @@ export default function BookingConfirmationForm() {
     }
     if (!hasSignature) {
       toast.error("Please provide your signature before continuing.");
+      return;
+    }
+
+    if (!passportDoc) {
+      toast.error("Please upload your passport copy.");
       return;
     }
 
