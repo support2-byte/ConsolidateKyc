@@ -112,10 +112,10 @@ export default function Unauthorized() {
         <Typography variant="body2" sx={{ color: colors.textMuted }}>
           Still stuck? Email{" "}
           <Link
-            href="mailto:support@yourcompany.com"
+            href="mailto:support@royalgulfshipping.com"
             sx={{ color: colors.primary, fontWeight: 600 }}
           >
-            support@yourcompany.com
+            support@royalgulfshipping.com
           </Link>
         </Typography>
       </Paper>
